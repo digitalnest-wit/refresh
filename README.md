@@ -27,6 +27,12 @@ The binary does the following.
 
 ## Installation
 
+```sh
+curl -L -o refresh https://github.com/villaleo/refresh/releases/download/1.0.0/refresh
+chmod +x ./refresh
+./refresh
+```
+
 Checkout the releases [here](https://github.com/villaleo/refresh/releases). Or click on the latest release on the right side bar 👉🏻.
 
  All the binaries can be found in the `bin/` directory.
