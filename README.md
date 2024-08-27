@@ -22,8 +22,9 @@ The binary does the following.
    - `wayou.vscode-todo-highlight` (highlight keywords)
    - `xabikos.javascriptsnippets` (snippets)
    - `yzhang.markdown-all-in-one` (more markdown support)
-4. Installs GitHub Desktop (via Homebrew)
-5. Installs PHP (via Homebrew)
+4. Updates the VS Code user settings profile `settings.json`.
+5. Installs GitHub Desktop (via Homebrew)
+6. Installs PHP (via Homebrew)
 
 ## Installation
 
