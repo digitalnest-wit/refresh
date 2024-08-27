@@ -2,11 +2,9 @@
 
 A smol binary that installs the tools needed to get started with programming with HTML, CSS, JavaScript, and PHP. A handful of important VS Code extensions are installed as well.
 
-> The binaries on this project are set to target macOS machines.
+> This project is set to target macOS machines.
 
-## What's included
-
-The binary does the following.
+## What happens?
 
 1. Installs Homebrew (required to install everything below 👇🏻).
 2. Installs VS Code (via Homebrew)
@@ -28,14 +26,14 @@ The binary does the following.
 
 ## Installation
 
+From the command line:
+
 ```sh
-curl -L -o refresh https://github.com/villaleo/refresh/releases/download/1.0.0/refresh
-chmod +x ./refresh
+curl -L -o refresh https://github.com/villaleo/refresh/releases/download/v1.1.1/refresh_universal
+chmod +x ./refresh_universal
 ./refresh
 ```
 
-Checkout the releases [here](https://github.com/villaleo/refresh/releases). Or click on the latest release on the right side bar 👉🏻.
+Or, checkout the releases [here](https://github.com/villaleo/refresh/releases).
 
- All the binaries can be found in the `bin/` directory.
-
-There is a universal binary `refresh` for your convenience. You may also the `refresh_amd64` for Intel Macs and `refresh_arm64` for Silicon Macs.
+There is a universal binary `refresh_universal` for your convenience. You may also the `refresh_amd64` for Intel Macs and `refresh_arm64` for Silicon Macs.
