@@ -1,22 +1,19 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
+	"io"
+	"log"
 	"os"
 	"os/exec"
+	"strings"
 )
 
-func main() {
-	// Verify Homebrew is installed.
-	cmd := exec.Command("/bin/bash", "-c", "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)")
-	mustInstall("brew", cmd)
+type jsonMap map[string]interface{}
 
-	// Verify VS Code is installed.
-	cmd = exec.Command("brew", "install", "--cask", "visual-studio-code")
-	mustInstall("code", cmd)
-
-	// VS Code extensions to install
-	vscodeExtensions := []string{
+var (
+	// list of vscode extensions to install
+	vscodeExtensions = []string{
 		"beardedbear.beardedtheme",
 		"bmewburn.vscode-intelephense-client",
 		"davidanson.vscode-markdownlint",
@@ -29,55 +26,159 @@ func main() {
 		"xabikos.javascriptsnippets",
 		"yzhang.markdown-all-in-one",
 	}
+	// Updated vscode user config to use
+	config = jsonMap{
+		"editor.tabSize":             4,
+		"workbench.colorTheme":       "Bearded Theme Coffee",
+		"workbench.iconTheme":        "material-icon-theme",
+		"workbench.productIconTheme": "icons-carbon",
+		"[css]": jsonMap{
+			"editor.defaultFormatter": "esbenp.prettier-vscode",
+			"editor.formatOnPaste":    true,
+			"editor.formatOnSave":     true,
+		},
+		"[html]": jsonMap{
+			"editor.defaultFormatter": "esbenp.prettier-vscode",
+			"editor.formatOnPaste":    true,
+			"editor.formatOnSave":     true,
+			"editor.tabSize":          2,
+		},
+		"liveServer.settings.donotShowInfoMsg": true,
+		"explorer.confirmDelete":               false,
+		"explorer.confirmDragAndDrop":          false,
+	}
+)
 
-	// Install VS Code extensions.
-	fmt.Println("checking extensions..")
+func main() {
+	// Install homebrew
+	cmd := exec.Command("/bin/bash", "-c", "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)")
+	mustInstall("brew", cmd)
+
+	// Install vscode
+	cmd = exec.Command("brew", "install", "--cask", "visual-studio-code")
+	mustInstall("code", cmd)
+
+	// Install each vscode extenion in the list
+	log.Println("installing extensions")
 	for _, ext := range vscodeExtensions {
-		fmt.Printf("\t%s.. ", ext)
+		log.Printf("    %s\n", ext)
 		cmd := exec.Command("code", "--install-extension", ext)
 		if err := cmd.Run(); err != nil {
-			fmt.Printf("\nerror: failed to install extension %q.", ext)
-			fmt.Println("aborted.")
+			log.Printf("failed to install extension %q.\n", ext)
+			log.Println(err)
 			os.Exit(1)
 		}
-		fmt.Println("ok")
 	}
-	fmt.Println("done. all extensions installed.")
+	log.Println("done. all extensions installed.")
 
-	// Verify GitHub Desktop is installed.
+	// Update vscode user config
+	mustUpdateVscodeConfig(config)
+	log.Println("vscode user settings updated.")
+
+	// Install github
 	cmd = exec.Command("brew", "install", "--cask", "github")
 	mustInstall("github", cmd)
 
-	// Verify PHP is installed.
+	// Install php
 	cmd = exec.Command("brew", "install", "php")
 	mustInstall("php", cmd)
 
-	fmt.Println("finished. all processes done.")
+	log.Println("all done!")
 }
 
-// commandExists checks if the command name exists on the computer.
+func mustUpdateVscodeConfig(config map[string]interface{}) {
+	// Get the current logged-in user
+	cmd := exec.Command("whoami")
+	out, err := cmd.Output()
+	if err != nil {
+		log.Println("failed to get logged in user.")
+		os.Exit(1)
+	}
+	user := strings.Trim(string(out), "\n\r")
+
+	// Open the vscode user settings file
+	settingsPath := "/Users/" + user + "/Library/Application Support/Code/User/settings.json"
+	usf, err := os.Open(settingsPath)
+	if err != nil {
+		log.Println("failed to locate vscode user settings file.")
+		os.Exit(1)
+	}
+	defer usf.Close()
+
+	// Create a temporary file to store changes
+	tf, err := os.Create("tmp.uset.json")
+	if err != nil {
+		log.Println("failed to create a temporary file.")
+		os.Exit(1)
+	}
+	defer func() {
+		tf.Close()
+		os.Remove(tf.Name()) // Clean up temp file
+	}()
+
+	// Copy the contents of the existing settings file into the temporary file
+	_, err = io.Copy(tf, usf)
+	if err != nil {
+		log.Println("failed to copy existing settings.")
+		os.Exit(1)
+	}
+
+	// Close and reopen temp file for reading and writing
+	tf.Close()
+	tf, err = os.OpenFile(tf.Name(), os.O_RDWR, 0644)
+	if err != nil {
+		log.Println("failed to reopen temporary file for updates.")
+		os.Exit(1)
+	}
+
+	// Read the existing user settings
+	settings := make(map[string]any)
+	err = json.NewDecoder(tf).Decode(&settings)
+	if err != nil {
+		log.Println("failed to parse user settings file.", err)
+		os.Exit(1)
+	}
+
+	// Merge the new config into the existing settings
+	for key, value := range config {
+		settings[key] = value
+	}
+
+	// Move file pointer back to the start of the file
+	tf.Seek(0, 0)
+
+	// Write the updated settings back to the temp file
+	tf.Truncate(0) // Clear the file before writing new content
+	err = json.NewEncoder(tf).Encode(settings)
+	if err != nil {
+		log.Println("failed to write updated settings.", err)
+		os.Exit(1)
+	}
+
+	// Replace the original file with the updated temporary file
+	err = os.Rename(tf.Name(), settingsPath)
+	if err != nil {
+		log.Println("failed to save changes to the vscode user settings file.", err)
+		os.Exit(1)
+	}
+}
+
 func commandExists(name string) bool {
 	cmd := exec.Command("command", "-v", name, "&> /dev/null")
 	return cmd.Run() == nil
 }
 
-// mustInstall checks if command s exists. If s exists, then a message is
-// printed to stdout. Otherwise cmd is executed, the output is printed to
-// stdout, and the process is killed.
 func mustInstall(s string, cmd *exec.Cmd) {
 	if commandExists(s) {
-		fmt.Printf("%q already installed.\n", s)
+		log.Printf("%q already installed.\n", s)
 		return
 	}
 
-	fmt.Printf("%q not installed.\n", s)
-	fmt.Printf("installing %q.. ", s)
-	out, err := cmd.Output()
-	fmt.Printf("%s\n", out)
+	log.Printf("installing %q.. ", s)
+	_, err := cmd.Output()
 	if err != nil {
-		fmt.Printf("\nerror: failed to install %q.\n", s)
-		fmt.Println("aborted.")
+		log.Printf("\nfailed to install %q.\n", s)
 		os.Exit(1)
 	}
-	fmt.Println("done.")
+	log.Println("done.")
 }
