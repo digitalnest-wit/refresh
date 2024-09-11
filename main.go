@@ -9,35 +9,18 @@ import (
 	"strings"
 )
 
-type jsonMap map[string]interface{}
-
-var (
-	// list of vscode extensions to install
-	vscodeExtensions = []string{
-		"beardedbear.beardedtheme",
-		"bmewburn.vscode-intelephense-client",
-		"davidanson.vscode-markdownlint",
-		"ecmel.vscode-html-css",
-		"esbenp.prettier-vscode",
-		"neilbrayfield.php-docblocker",
-		"pkief.material-icon-theme",
-		"ritwickdey.liveserver",
-		"wayou.vscode-todo-highlight",
-		"xabikos.javascriptsnippets",
-		"yzhang.markdown-all-in-one",
-	}
-	// Updated vscode user config to use
-	config = jsonMap{
+func main() {
+	config := map[string]interface{}{
 		"editor.tabSize":             4,
 		"workbench.colorTheme":       "Bearded Theme Coffee",
 		"workbench.iconTheme":        "material-icon-theme",
 		"workbench.productIconTheme": "icons-carbon",
-		"[css]": jsonMap{
+		"[css]": map[string]interface{}{
 			"editor.defaultFormatter": "esbenp.prettier-vscode",
 			"editor.formatOnPaste":    true,
 			"editor.formatOnSave":     true,
 		},
-		"[html]": jsonMap{
+		"[html]": map[string]interface{}{
 			"editor.defaultFormatter": "esbenp.prettier-vscode",
 			"editor.formatOnPaste":    true,
 			"editor.formatOnSave":     true,
@@ -47,46 +30,7 @@ var (
 		"explorer.confirmDelete":               false,
 		"explorer.confirmDragAndDrop":          false,
 	}
-)
 
-func main() {
-	// Install homebrew
-	cmd := exec.Command("/bin/bash", "-c", "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)")
-	mustInstall("brew", cmd)
-
-	// Install vscode
-	cmd = exec.Command("brew", "install", "--cask", "visual-studio-code")
-	mustInstall("code", cmd)
-
-	// Install each vscode extenion in the list
-	log.Println("installing extensions")
-	for _, ext := range vscodeExtensions {
-		log.Printf("    %s\n", ext)
-		cmd := exec.Command("code", "--install-extension", ext)
-		if err := cmd.Run(); err != nil {
-			log.Printf("failed to install extension %q.\n", ext)
-			log.Println(err)
-			os.Exit(1)
-		}
-	}
-	log.Println("done. all extensions installed.")
-
-	// Update vscode user config
-	mustUpdateVscodeConfig(config)
-	log.Println("vscode user settings updated.")
-
-	// Install github
-	cmd = exec.Command("brew", "install", "--cask", "github")
-	mustInstall("github", cmd)
-
-	// Install php
-	cmd = exec.Command("brew", "install", "php")
-	mustInstall("php", cmd)
-
-	log.Println("all done!")
-}
-
-func mustUpdateVscodeConfig(config map[string]interface{}) {
 	// Get the current logged-in user
 	cmd := exec.Command("whoami")
 	out, err := cmd.Output()
@@ -161,24 +105,4 @@ func mustUpdateVscodeConfig(config map[string]interface{}) {
 		log.Println("failed to save changes to the vscode user settings file.", err)
 		os.Exit(1)
 	}
-}
-
-func commandExists(name string) bool {
-	cmd := exec.Command("command", "-v", name, "&> /dev/null")
-	return cmd.Run() == nil
-}
-
-func mustInstall(s string, cmd *exec.Cmd) {
-	if commandExists(s) {
-		log.Printf("%q already installed.\n", s)
-		return
-	}
-
-	log.Printf("installing %q.. ", s)
-	_, err := cmd.Output()
-	if err != nil {
-		log.Printf("\nfailed to install %q.\n", s)
-		os.Exit(1)
-	}
-	log.Println("done.")
 }
