@@ -5,7 +5,7 @@ A macOS-specific binary that updates the VS Code user profile settings to get st
 ## Installation
 
 ```bash
-curl -L -o refresh https://github.com/villaleo/refresh/releases/download/v2/refresh
+curl -L -o refresh https://github.com/digitalnest-wit/refresh/releases/download/v2/refresh
 chmod +x ./refresh
 ./refresh
 ```
